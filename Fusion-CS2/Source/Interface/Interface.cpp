@@ -23,6 +23,8 @@ namespace Interface {
 
         ImGui_ImplWin32_Init(Window);
         ImGui_ImplDX11_Init(Device.Get(), Context.Get());
+
+        SetStyle();
     }
 
     LRESULT Renderer::HandleWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) noexcept {
@@ -71,24 +73,7 @@ namespace Interface {
         return OriginalPresent(SwapChain, SyncInterval, Flags);
     }
 
-    void Renderer::RenderFrame() noexcept {
-        ImGui_ImplDX11_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
-
-        if (Globals::Interface::Open)
-            RenderMenu();
-
-        if (Globals::ESP::Enabled)
-            Visuals::Players();
-
-        ImGui::EndFrame();
-        ImGui::Render();
-        Context->OMSetRenderTargets(1, RenderView.GetAddressOf(), nullptr);
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-    }
-
-    void Renderer::RenderMenu() noexcept {
+    void Renderer::SetStyle() noexcept {
         ImGuiStyle& Style = ImGui::GetStyle();
         Style.WindowRounding = 8.0f;
         Style.ChildRounding = 8.0f;
@@ -98,23 +83,42 @@ namespace Interface {
         Style.ScrollbarRounding = 4.0f;
         Style.TabRounding = 4.0f;
 
-        ImVec4* colors = ImGui::GetStyle().Colors;
-        colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.12f, 0.94f);
-        colors[ImGuiCol_Border] = ImVec4(0.25f, 0.25f, 0.28f, 0.50f);
-        colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
-        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.22f, 0.22f, 0.24f, 1.00f);
-        colors[ImGuiCol_FrameBgActive] = ImVec4(0.28f, 0.28f, 0.30f, 1.00f);
-        colors[ImGuiCol_TitleBgActive] = ImVec4(0.15f, 0.15f, 0.17f, 1.00f);
-        colors[ImGuiCol_CheckMark] = ImVec4(0.28f, 0.56f, 1.00f, 1.00f);
-        colors[ImGuiCol_SliderGrab] = ImVec4(0.28f, 0.56f, 1.00f, 1.00f);
-        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.37f, 0.61f, 1.00f, 1.00f);
-        colors[ImGuiCol_Button] = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
-        colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.28f, 0.30f, 1.00f);
-        colors[ImGuiCol_ButtonActive] = ImVec4(0.33f, 0.33f, 0.35f, 1.00f);
-        colors[ImGuiCol_Header] = ImVec4(0.18f, 0.18f, 0.20f, 1.00f);
-        colors[ImGuiCol_HeaderHovered] = ImVec4(0.25f, 0.25f, 0.27f, 1.00f);
-        colors[ImGuiCol_HeaderActive] = ImVec4(0.30f, 0.30f, 0.32f, 1.00f);
+        ImVec4* Colors = Style.Colors;
+        Colors[ImGuiCol_WindowBg] = ImVec4(0.10f, 0.10f, 0.12f, 0.94f);
+        Colors[ImGuiCol_Border] = ImVec4(0.25f, 0.25f, 0.28f, 0.50f);
+        Colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
+        Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.22f, 0.22f, 0.24f, 1.00f);
+        Colors[ImGuiCol_FrameBgActive] = ImVec4(0.28f, 0.28f, 0.30f, 1.00f);
+        Colors[ImGuiCol_TitleBgActive] = ImVec4(0.15f, 0.15f, 0.17f, 1.00f);
+        Colors[ImGuiCol_CheckMark] = ImVec4(0.28f, 0.56f, 1.00f, 1.00f);
+        Colors[ImGuiCol_SliderGrab] = ImVec4(0.28f, 0.56f, 1.00f, 1.00f);
+        Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.37f, 0.61f, 1.00f, 1.00f);
+        Colors[ImGuiCol_Button] = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
+        Colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.28f, 0.30f, 1.00f);
+        Colors[ImGuiCol_ButtonActive] = ImVec4(0.33f, 0.33f, 0.35f, 1.00f);
+        Colors[ImGuiCol_Header] = ImVec4(0.18f, 0.18f, 0.20f, 1.00f);
+        Colors[ImGuiCol_HeaderHovered] = ImVec4(0.25f, 0.25f, 0.27f, 1.00f);
+        Colors[ImGuiCol_HeaderActive] = ImVec4(0.30f, 0.30f, 0.32f, 1.00f);
+    }
 
+    void Renderer::RenderFrame() noexcept {
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
+        if (Globals::ESP::Enabled)
+            Visuals::Players();
+
+        if (Globals::Interface::Open)
+            RenderMenu();
+
+        ImGui::EndFrame();
+        ImGui::Render();
+        Context->OMSetRenderTargets(1, RenderView.GetAddressOf(), nullptr);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+    }
+
+    void Renderer::RenderMenu() noexcept {
         ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
         ImGui::Begin("Fusion: CS2", &Globals::Interface::Open, ImGuiWindowFlags_NoCollapse);
 
@@ -131,9 +135,9 @@ namespace Interface {
             if (ImGui::Button(Tabs[i], ImVec2(ImGui::GetWindowWidth() * 0.5f - 12, 0)))
                 CurrentTab = i;
             if (CurrentTab == i)
-                ImGui::PushStyleColor(ImGuiCol_Button, colors[ImGuiCol_ButtonActive]);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.33f, 0.33f, 0.35f, 1.00f));
             else
-                ImGui::PushStyleColor(ImGuiCol_Button, colors[ImGuiCol_Button]);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.20f, 0.22f, 1.00f));
             ImGui::PopStyleColor(1);
         }
 

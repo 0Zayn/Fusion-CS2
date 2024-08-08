@@ -47,6 +47,8 @@ namespace Interface {
         void Shutdown() noexcept;
 
     private:
+        void SetStyle() noexcept;
+
         void RenderFrame() noexcept;
         void RenderMenu() noexcept;
 
