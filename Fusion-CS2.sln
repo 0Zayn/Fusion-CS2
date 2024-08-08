@@ -5,6 +5,8 @@ VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Fusion-CS2", "Fusion-CS2\Fusion-CS2.vcxproj", "{D6FCD469-D554-4C2A-A2B7-10E58B9EBE96}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Loader", "Loader\Loader.vcxproj", "{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{D6FCD469-D554-4C2A-A2B7-10E58B9EBE96}.Release|x64.Build.0 = Release|x64
 		{D6FCD469-D554-4C2A-A2B7-10E58B9EBE96}.Release|x86.ActiveCfg = Release|Win32
 		{D6FCD469-D554-4C2A-A2B7-10E58B9EBE96}.Release|x86.Build.0 = Release|Win32
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Debug|x64.ActiveCfg = Debug|x64
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Debug|x64.Build.0 = Debug|x64
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Debug|x86.ActiveCfg = Debug|Win32
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Debug|x86.Build.0 = Debug|Win32
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Release|x64.ActiveCfg = Release|x64
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Release|x64.Build.0 = Release|x64
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Release|x86.ActiveCfg = Release|Win32
+		{47429D47-D6B9-46E4-BBAF-6BC25849C0FB}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
