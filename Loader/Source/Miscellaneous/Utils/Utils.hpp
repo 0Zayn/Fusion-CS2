@@ -3,10 +3,21 @@
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <string>
-#include <vector>
+#include <memory>
+#include <iostream>
 
-namespace Utils
-{
-    HANDLE OpenTargetProc(const std::wstring& ProcessName);
-    bool ReadFile(const std::wstring& FilePath, std::vector<BYTE>& Buffer);
+namespace Utils {
+
+    enum class LogType {
+        INFO,
+        WARNING,
+        ERR,
+        SUCCESS
+    };
+
+    void Log(LogType type, const std::string& message);
+
+    DWORD FindProcessId(const std::string& processName);
+    std::unique_ptr<void, decltype(&CloseHandle)> OpenHandle(DWORD processId);
+
 }
