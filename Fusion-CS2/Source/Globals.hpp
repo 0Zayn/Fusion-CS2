@@ -17,6 +17,7 @@ namespace Globals {
 
 		inline bool Box = false;
 
+		inline bool Name = false;
 		inline bool Health = false;
 		inline bool HealthText = false;
 	}

@@ -32,6 +32,7 @@ void DrawEntity(const Entities::Entity& entity, ImDrawList* DrawList) {
         ImColor BarColor = HealthColor(HealthPercentage);
         ImColor BackgroundColor = ImColor(0x00, 0x00, 0x00, 76);
         ImColor BorderColor = ImColor(255, 255, 255);
+        ImColor TextColor = ImColor(255, 255, 255);
 
         ImVec2 MousePos = ImGui::GetMousePos();
 
@@ -41,6 +42,7 @@ void DrawEntity(const Entities::Entity& entity, ImDrawList* DrawList) {
         if (MousePos.x >= BoxMin.x && MousePos.x <= BoxMax.x &&
             MousePos.y >= BoxMin.y && MousePos.y <= BoxMax.y) {
             BorderColor = ImColor(234, 93, 96);
+            TextColor = ImColor(234, 93, 96);
         }
 
         if (Globals::ESP::Box) {
@@ -55,6 +57,16 @@ void DrawEntity(const Entities::Entity& entity, ImDrawList* DrawList) {
                 BoxMax,
                 BorderColor,
                 0.0f
+            );
+        }
+
+        if (Globals::ESP::Name) {
+            ImVec2 TextPos = { Feet.X - Width / 2, Head.Y - 15.0f };
+
+            DrawList->AddText(
+                TextPos,
+                TextColor,
+                entity.Name.c_str()
             );
         }
 
@@ -75,7 +87,6 @@ void DrawEntity(const Entities::Entity& entity, ImDrawList* DrawList) {
 
         if (Globals::ESP::HealthText) {
             ImVec2 TextPos = { Feet.X - Width / 2 + 2.0f, Head.Y + Height - 15.0f };
-            ImColor TextColor = BorderColor;
 
             DrawList->AddText(
                 ImVec2(TextPos.x, TextPos.y),

@@ -46,9 +46,6 @@ namespace Entities {
             auto PlayerPawn = *reinterpret_cast<uintptr_t*>(LE2 + 120 * (Player & 0x1FF));
             if (!PlayerPawn || PlayerPawn == LocalPlayer) continue;
 
-            /*auto GameScene = *reinterpret_cast<uintptr_t*>(PlayerPawn + 0x310);
-            auto BoneArray = *reinterpret_cast<uintptr_t*>(PlayerPawn + 0x160 + 0x8);*/
-
             int Health = *reinterpret_cast<int*>(PlayerPawn + Offsets::Health);
             if (Health <= 0 || Health > 100)
                 continue;
@@ -57,10 +54,9 @@ namespace Entities {
             if (Team == LocalTeam) continue;
 
             Vector3 FeetPos = *reinterpret_cast<Vector3*>(PlayerPawn + Offsets::OldOrigin);
-            //Vector3 HeadPos = *reinterpret_cast<Vector3*>(BoneArray + 6 * 32); // Uses bone array to find the head (except it doesn't work, i'll look into it)
             Vector3 HeadPos = { FeetPos.X, FeetPos.Y, FeetPos.Z + 75.0f };
 
-            VisualsList.push_back({ PlayerPawn, Health, Team, HeadPos, FeetPos });
+            VisualsList.push_back({ PlayerPawn, "Player", Health, Team, HeadPos, FeetPos });
         }
     }
 
@@ -102,7 +98,7 @@ namespace Entities {
             Vector3 FeetPos = *reinterpret_cast<Vector3*>(PlayerPawn + Offsets::OldOrigin);
             Vector3 HeadPos = { FeetPos.X, FeetPos.Y, FeetPos.Z + 65.0f };
 
-            AimbotList.push_back({ PlayerPawn, Health, Team, HeadPos, FeetPos });
+            AimbotList.push_back({ PlayerPawn, "Player", Health, Team, HeadPos, FeetPos });
         }
     }
 }

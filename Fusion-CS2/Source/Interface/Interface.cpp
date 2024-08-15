@@ -153,6 +153,7 @@ namespace Interface {
 
             ImGui::Checkbox("Box", &Globals::ESP::Box);
 
+            ImGui::Checkbox("Name", &Globals::ESP::Name);
             ImGui::Checkbox("Health", &Globals::ESP::Health);
             ImGui::Checkbox("Health Text", &Globals::ESP::HealthText);
 
