@@ -9,6 +9,7 @@ This should be maintained every week, if I'm not lazy.
 Great source for beginners to learn
 
 **Recommend any features/changes, and they most likely will be added.**
+
 Images:
 ![image](https://github.com/user-attachments/assets/9437db67-af86-4a4d-a2a5-85d2c2ae493f)
 
