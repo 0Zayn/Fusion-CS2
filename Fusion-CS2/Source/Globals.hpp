@@ -25,7 +25,14 @@ namespace Globals {
 	namespace Aimbot {
 		inline bool Enabled = false;
 
+		inline float FOV = 30.0f;
 		inline float Smoothing = 0.5f;
+
+		inline bool DrawFOV = false;
 		inline bool StickyAim = false;
+	}
+
+	namespace Misc {
+		inline bool TeamCheck = false;
 	}
 }

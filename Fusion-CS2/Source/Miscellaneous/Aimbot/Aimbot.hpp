@@ -8,30 +8,47 @@ Authors: 0Zayn (Zayn)
 #pragma once
 
 #include <Windows.h>
+#include <array>
 #include <vector>
 #include <algorithm>
 #include <cmath>
-#include <limits>
+#include <optional>
+#include <memory>
 #include <mutex>
-#include <chrono>
-#include <thread>
 
 #include <Entities/Entities.hpp>
 #include <Math/Math.hpp>
 #include <Globals.hpp>
 
-namespace Aimbot {
-    class AimbotSystem {
-    public:
-        static void Run();
-        static constexpr int KeybindCode = 'E';
+class CAimbot {
+public:
+    void Run() noexcept;
+    static constexpr int DEFAULT_KEY = 'E';
 
-    private:
-        static Vector2 GetClosestPlayer();
+private:
+    struct Target {
+        Vector3 Angle;
+        float Distance;
 
-        static void MoveMouse(const Vector2& TargetPos);
-        static float CalculateDistance(const Vector2& A, const Vector2& B);
-
-        static Vector2 Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3, float t);
+        bool operator<(const Target& Other) const noexcept {
+            return Distance < Other.Distance;
+        }
     };
-}
+
+    std::optional<Vector3> GetPlayer() noexcept;
+
+    Vector3 CalculateAngle(const Vector3& Start, const Vector3& End) const noexcept;
+    void ApplySmoothing(const Vector3& Target) noexcept;
+
+    std::optional<Vector3> GetLocalEye() const noexcept;
+    std::optional<Vector3> GetEntityEye(const CEntities::Entity& Entity) const noexcept;
+
+    bool SetViewAngles(const Vector3& Angles) noexcept;
+    Vector3 CalculateBezier(float T, const std::array<Vector3, 4>& Points) const noexcept;
+
+    static constexpr float PI = 3.14159265358979323846f;
+    static constexpr float RAD2DEG = 180.0f / PI;
+    static constexpr float ANGLE_EPSILON = 0.1f;
+};
+
+inline auto Aimbot = std::make_unique<CAimbot>();

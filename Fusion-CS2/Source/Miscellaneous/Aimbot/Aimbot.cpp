@@ -1,112 +1,184 @@
-/*
-
-Aimbot.cpp (Finds closest player to the mouse to lock onto enemies)
-Authors: 0Zayn (Zayn)
-
-*/
-
 #include "Aimbot.hpp"
 
-namespace Aimbot {
-    void AimbotSystem::Run() {
-        if (Globals::Aimbot::Enabled) {
-            if (GetAsyncKeyState(KeybindCode) & 0x8000) {
-                Entities::UpdateAimbot();
+void CAimbot::Run() noexcept {
+    if (!Globals::Aimbot::Enabled || !(GetAsyncKeyState(DEFAULT_KEY) & 0x8000))
+        return;
 
-                auto ClosestEntity = GetClosestPlayer();
+    const auto Target = GetPlayer();
+    if (!Target.has_value())
+        return;
 
-                if (ClosestEntity.X != 0.0f && ClosestEntity.Y != 0.0f)
-                    MoveMouse(ClosestEntity);
-            }
-        }
+    if (Globals::Aimbot::StickyAim && Target.has_value())
+        SetViewAngles(Target.value());
+    else if (Target.has_value())
+        ApplySmoothing(Target.value());
+}
+
+std::optional<Vector3> CAimbot::GetPlayer() noexcept {
+    if (!CEntities::Client || !Entities)
+        return std::nullopt;
+
+    Entities->Update();
+
+    const auto LocalEye = GetLocalEye();
+    if (!LocalEye.has_value())
+        return std::nullopt;
+
+    auto* ViewAngles = reinterpret_cast<Vector3*>(CEntities::Client + Offsets::ViewAngles);
+
+    const auto CurrentAngle = *ViewAngles;
+    std::vector<Target> Targets;
+    Targets.reserve(32);
+
+    const auto& EntityList = Entities->GetEntities();
+    for (const auto& Entity : EntityList) {
+        if (!Entity.IsValid() || !Entity.Base)
+            continue;
+
+        const auto EntityEye = GetEntityEye(Entity);
+        if (!EntityEye.has_value())
+            continue;
+
+        const auto Angle = CalculateAngle(LocalEye.value(), EntityEye.value());
+        if (!std::isfinite(Angle.X) || !std::isfinite(Angle.Y) || !std::isfinite(Angle.Z))
+            continue;
+
+        const float Distance = std::hypot(Angle.X - CurrentAngle.X, Angle.Y - CurrentAngle.Y);
+        if (!std::isfinite(Distance) || Distance > Globals::Aimbot::FOV)
+            continue;
+
+        Targets.push_back({ Angle, Distance });
     }
 
-    Vector2 AimbotSystem::GetClosestPlayer() {
-        POINT MousePos;
-        GetCursorPos(&MousePos);
+    if (Targets.empty())
+        return std::nullopt;
 
-        Vector2 ClosestPos{ 0.0f, 0.0f };
-        float ClosestDistance = 1e30f;
+    std::sort(Targets.begin(), Targets.end());
+    return Targets[0].Angle;
+}
 
-        std::lock_guard<std::mutex> Lock(Entities::EntityM);
-        for (const auto& Entity : Entities::AimbotList) {
-            if (!Entity.IsValid()) continue;
+void CAimbot::ApplySmoothing(const Vector3& Target) noexcept {
+    auto* ViewAngles = reinterpret_cast<Vector3*>(CEntities::Client + Offsets::ViewAngles);
+    if (!ViewAngles)
+        return;
 
-            Vector2 ScreenPos;
-            if (Entity.HeadPos.WorldToScreen(ScreenPos, reinterpret_cast<float(*)[4][4]>(Entities::Client + Offsets::ViewMatrix))) {
-                float Distance = CalculateDistance({ static_cast<float>(MousePos.x), static_cast<float>(MousePos.y) }, ScreenPos);
+    auto CurrentAngle = *ViewAngles;
+    const Vector3 Delta = Target - CurrentAngle;
 
-                if (Distance < ClosestDistance) {
-                    ClosestDistance = Distance;
-                    ClosestPos = ScreenPos;
-                }
-            }
-        }
+    if (!std::isfinite(Delta.X) || !std::isfinite(Delta.Y) || !std::isfinite(Delta.Z))
+        return;
 
-        return ClosestPos;
+    std::array<Vector3, 4> ControlPoints = {
+        CurrentAngle,
+        CurrentAngle + Delta * 0.3f,
+        Target - Delta * 0.5f,
+        Target
+    };
+
+    for (const auto& Point : ControlPoints) {
+        if (!std::isfinite(Point.X) || !std::isfinite(Point.Y) || !std::isfinite(Point.Z))
+            return;
     }
 
-    void AimbotSystem::MoveMouse(const Vector2& TargetPos) {
-        POINT CurrentPos;
-        GetCursorPos(&CurrentPos);
+    const float Smoothing = std::clamp(Globals::Aimbot::Smoothing * 0.8f, 0.15f, 0.85f);
+    auto NewAngle = CalculateBezier(Smoothing, ControlPoints);
 
-        Vector2 StartPos(static_cast<float>(CurrentPos.x), static_cast<float>(CurrentPos.y));
+    if (!std::isfinite(NewAngle.X) || !std::isfinite(NewAngle.Y) || !std::isfinite(NewAngle.Z))
+        return;
 
-        if (Globals::Aimbot::StickyAim) { // Needs fixing ong
-            Vector2 Delta(
-                TargetPos.X - static_cast<float>(CurrentPos.x),
-                TargetPos.Y - static_cast<float>(CurrentPos.y)
-            );
+    NewAngle.X = std::clamp(NewAngle.X, -89.0f, 89.0f);
+    NewAngle.Y = std::fmod(NewAngle.Y + 180.0f, 360.0f) - 180.0f;
+    NewAngle.Z = 0.0f;
 
-            Delta.X *= Globals::Aimbot::Smoothing;
-            Delta.Y *= Globals::Aimbot::Smoothing;
+    if (std::isfinite(NewAngle.X) && std::isfinite(NewAngle.Y) && std::isfinite(NewAngle.Z))
+        SetViewAngles(NewAngle);
+}
 
-            mouse_event(MOUSEEVENTF_MOVE, static_cast<DWORD>(Delta.X), static_cast<DWORD>(Delta.Y), 0, 0);
-        }
-        else {
-            Vector2 ControlPoint1 = StartPos + (TargetPos - StartPos) * 0.25f;
-            Vector2 ControlPoint2 = StartPos + (TargetPos - StartPos) * 0.75f;
+std::optional<Vector3> CAimbot::GetLocalEye() const noexcept {
+    if (!CEntities::Client)
+        return std::nullopt;
 
-            const int Steps = 50;
-            const float SmoothingFactor = Globals::Aimbot::Smoothing;
+    auto* LocalPawnPtr = reinterpret_cast<uintptr_t*>(CEntities::Client + Offsets::LocalPlayer);
 
-            for (int i = 1; i <= Steps; ++i) {
-                float t = static_cast<float>(i) / Steps;
-                Vector2 Point = Bezier(StartPos, ControlPoint1, ControlPoint2, TargetPos, t);
+    uintptr_t LocalPawn = *LocalPawnPtr;
+    if (!LocalPawn)
+        return std::nullopt;
 
-                Vector2 Smoothed = StartPos + (Point - StartPos) * SmoothingFactor;
+    auto* Origin = reinterpret_cast<Vector3*>(LocalPawn + Offsets::OldOrigin);
+    auto* ViewOffset = reinterpret_cast<Vector3*>(LocalPawn + Offsets::ViewOffset);
 
-                Vector2 Delta(
-                    Smoothed.X - static_cast<float>(CurrentPos.x),
-                    Smoothed.Y - static_cast<float>(CurrentPos.y)
-                );
+    Vector3 LocalEye = *Origin + *ViewOffset;
+    if (!std::isfinite(LocalEye.X) || !std::isfinite(LocalEye.Y) || !std::isfinite(LocalEye.Z))
+        return std::nullopt;
 
-                mouse_event(MOUSEEVENTF_MOVE, static_cast<DWORD>(Delta.X), static_cast<DWORD>(Delta.Y), 0, 0);
+    if (LocalEye.Length() < ANGLE_EPSILON)
+        return std::nullopt;
 
-                CurrentPos.x += static_cast<LONG>(Delta.X);
-                CurrentPos.y += static_cast<LONG>(Delta.Y);
+    return LocalEye;
+}
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-    }
+std::optional<Vector3> CAimbot::GetEntityEye(const CEntities::Entity& Entity) const noexcept {
+    if (!Entity.Base)
+        return std::nullopt;
 
-    float AimbotSystem::CalculateDistance(const Vector2& A, const Vector2& B) {
-        return std::hypot(B.X - A.X, B.Y - A.Y);
-    }
+    auto* Origin = reinterpret_cast<Vector3*>(Entity.Base + Offsets::OldOrigin);
+    auto* ViewOffset = reinterpret_cast<Vector3*>(Entity.Base + Offsets::ViewOffset);
 
-    Vector2 AimbotSystem::Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, const Vector2& p3, float t) {
-        float u = 1.0f - t;
-        float tt = t * t;
-        float uu = u * u;
-        float uuu = uu * u;
-        float ttt = tt * t;
+    Vector3 Result = *Origin + *ViewOffset;
+    if (!std::isfinite(Result.X) || !std::isfinite(Result.Y) || !std::isfinite(Result.Z))
+        return std::nullopt;
 
-        Vector2 p = p0 * uuu;       // (1-t)^3 * P0
-        p = p + p1 * (3 * uu * t);  // 3 * (1-t)^2 * t * P1
-        p = p + p2 * (3 * u * tt);  // 3 * (1-t) * t^2 * P2
-        p = p + p3 * ttt;           // t^3 * P3
+    return Result;
+}
 
-        return p;
-    }
+bool CAimbot::SetViewAngles(const Vector3& Angles) noexcept {
+    if (!CEntities::Client)
+        return false;
+
+    auto* ViewAngles = reinterpret_cast<Vector3*>(CEntities::Client + Offsets::ViewAngles);
+
+    if (!ViewAngles)
+        return false;
+
+    if (!std::isfinite(Angles.X) || !std::isfinite(Angles.Y) || !std::isfinite(Angles.Z))
+        return false;
+
+    Vector3 SafeAngles = Angles;
+    SafeAngles.X = std::clamp(SafeAngles.X, -89.0f, 89.0f);
+    SafeAngles.Y = std::fmod(SafeAngles.Y + 180.0f, 360.0f) - 180.0f;
+    SafeAngles.Z = 0.0f;
+
+    std::memcpy(ViewAngles, &SafeAngles, sizeof(Vector3));
+    return true;
+}
+
+Vector3 CAimbot::CalculateAngle(const Vector3& Start, const Vector3& End) const noexcept {
+    const Vector3 Delta = End - Start;
+    const float Length = Delta.Length();
+
+    if (Length < ANGLE_EPSILON || !std::isfinite(Length))
+        return Vector3();
+
+    float Pitch = -std::asin(Delta.Z / Length) * RAD2DEG;
+    float Yaw = std::atan2(Delta.Y, Delta.X) * RAD2DEG;
+
+    if (!std::isfinite(Pitch) || !std::isfinite(Yaw))
+        return Vector3();
+
+    return Vector3(Pitch, Yaw, 0.0f);
+}
+
+Vector3 CAimbot::CalculateBezier(float T, const std::array<Vector3, 4>& Points) const noexcept {
+    T = std::clamp(T, 0.0f, 1.0f);
+
+    const float U = 1.0f - T;
+    const float TT = T * T;
+    const float UU = U * U;
+
+    Vector3 Result = Points[0] * (UU * U) + Points[1] * (3.0f * UU * T) + Points[2] * (3.0f * U * TT) + Points[3] * (TT * T);
+
+    if (!std::isfinite(Result.X) || !std::isfinite(Result.Y) || !std::isfinite(Result.Z))
+        return Vector3();
+
+    return Result;
 }

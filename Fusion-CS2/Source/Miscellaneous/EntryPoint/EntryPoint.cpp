@@ -12,10 +12,10 @@ DWORD WINAPI Setup(LPVOID Reversed) {
 
     do {
         if (kiero::init(kiero::RenderType::D3D11) == kiero::Status::Success) {
-            kiero::bind(8, reinterpret_cast<void**>(&Interface::g_Renderer->OriginalPresent),
+            kiero::bind(8, reinterpret_cast<void**>(&Interface::Renderer->OriginalPresent),
                 reinterpret_cast<void*>(static_cast<HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT)>(
                     [](IDXGISwapChain* SwapChain, UINT SyncInterval, UINT Flags) -> HRESULT {
-                        return Interface::g_Renderer->HandlePresent(SwapChain, SyncInterval, Flags);
+                        return Interface::Renderer->HandlePresent(SwapChain, SyncInterval, Flags);
                     }
                 ))
             );
@@ -26,7 +26,7 @@ DWORD WINAPI Setup(LPVOID Reversed) {
 
     std::thread([] {
         while (true) {
-            Aimbot::AimbotSystem::Run();
+            Aimbot->Run();
             std::this_thread::sleep_for(std::chrono::microseconds(5));
         }
     }).detach();
@@ -34,14 +34,14 @@ DWORD WINAPI Setup(LPVOID Reversed) {
     return TRUE;
 }
 
-BOOL WINAPI DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
-    switch (ul_reason_for_call) {
+BOOL WINAPI DllMain(HMODULE Module, DWORD Reason, LPVOID Reserved) {
+    switch (Reason) {
     case DLL_PROCESS_ATTACH:
-        DisableThreadLibraryCalls(hModule);
-        CreateThread(nullptr, 0, Setup, hModule, 0, nullptr);
+        DisableThreadLibraryCalls(Module);
+        CreateThread(nullptr, 0, Setup, Module, 0, nullptr);
         break;
     case DLL_PROCESS_DETACH:
-        Interface::g_Renderer->Shutdown();
+        Interface::Renderer->Shutdown();
         kiero::shutdown();
         break;
     }

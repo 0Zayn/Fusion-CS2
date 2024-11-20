@@ -41,9 +41,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
+    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -157,7 +158,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Entities\Entities.hpp" />
-    <ClInclude Include="Source\Miscellaneous\Aimbot\Aimbot.hpp" />
     <ClInclude Include="Dependencies\ImGui\imconfig.h" />
     <ClInclude Include="Dependencies\ImGui\imgui.h" />
     <ClInclude Include="Dependencies\ImGui\imgui_impl_dx11.h" />
@@ -178,6 +178,7 @@
     <ClInclude Include="Dependencies\Kiero\minhook\src\trampoline.h" />
     <ClInclude Include="Source\Globals.hpp" />
     <ClInclude Include="Source\Interface\Interface.hpp" />
+    <ClInclude Include="Source\Miscellaneous\Aimbot\Aimbot.hpp" />
     <ClInclude Include="Source\Miscellaneous\EntryPoint\EntryPoint.hpp" />
     <ClInclude Include="Source\Miscellaneous\Math\Math.hpp" />
     <ClInclude Include="Source\Miscellaneous\Visuals\Visuals.hpp" />
@@ -185,7 +186,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Entities\Entities.cpp" />
-    <ClCompile Include="Source\Miscellaneous\Aimbot\Aimbot.cpp" />
     <ClCompile Include="Dependencies\ImGui\imgui.cpp" />
     <ClCompile Include="Dependencies\ImGui\imgui_demo.cpp" />
     <ClCompile Include="Dependencies\ImGui\imgui_draw.cpp" />
@@ -201,6 +201,7 @@
     <ClCompile Include="Dependencies\Kiero\minhook\src\hook.c" />
     <ClCompile Include="Dependencies\Kiero\minhook\src\trampoline.c" />
     <ClCompile Include="Source\Interface\Interface.cpp" />
+    <ClCompile Include="Source\Miscellaneous\Aimbot\Aimbot.cpp" />
     <ClCompile Include="Source\Miscellaneous\EntryPoint\EntryPoint.cpp" />
     <ClCompile Include="Source\Miscellaneous\Math\Math.cpp" />
     <ClCompile Include="Source\Miscellaneous\Visuals\Visuals.cpp" />

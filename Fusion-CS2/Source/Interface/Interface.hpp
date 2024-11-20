@@ -30,10 +30,10 @@ using Present = HRESULT(__stdcall*)(IDXGISwapChain* SwapChain, UINT SyncInterval
 using WNDPROC = LRESULT(CALLBACK*)(HWND, UINT, WPARAM, LPARAM);
 
 namespace Interface {
-    class Renderer {
+    class CRenderer {
     public:
-        Renderer() noexcept;
-        ~Renderer() noexcept;
+        CRenderer() noexcept;
+        ~CRenderer() noexcept;
 
         void Initialize() noexcept;
 
@@ -60,5 +60,5 @@ namespace Interface {
         std::mutex RenderMutex;
     };
 
-    extern std::unique_ptr<Renderer> g_Renderer;
+    extern std::unique_ptr<CRenderer> Renderer;
 }

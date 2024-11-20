@@ -7,98 +7,81 @@ Authors: 0Zayn (Zayn)
 
 #include "Entities.hpp"
 
-namespace Entities {
-    std::vector<Entity> VisualsList;
-    std::vector<Entity> AimbotList;
-    std::mutex EntityM;
+void CEntities::Update() {
+    Entities.clear();
 
-    uintptr_t Client = reinterpret_cast<uintptr_t>(GetModuleHandle("client.dll"));
+    if (!Client) return;
 
-    bool Entity::IsValid() const {
-        return Base && Health > 0 && Health <= 100;
+    const auto EntityList = *reinterpret_cast<uintptr_t*>(Client + Offsets::EntityList);
+    const auto LocalPawn = *reinterpret_cast<uintptr_t*>(Client + Offsets::LocalPlayer);
+    const auto LocalTeam = *reinterpret_cast<int*>(Client + Offsets::Team);
+
+    if (!EntityList || !LocalPawn) return;
+
+    for (int i = 0; i < 64; ++i) {
+        const auto EntityData = GetEntityData(EntityList, i);
+        if (!IsValidEntity(EntityData, LocalTeam)) continue;
+
+        const auto Health = *reinterpret_cast<int*>(EntityData.Pawn + Offsets::Health);
+        if (Health <= 0 || Health > 100) continue;
+
+        const auto Origin = *reinterpret_cast<Vector3*>(EntityData.Pawn + Offsets::OldOrigin);
+        const auto ViewOffset = *reinterpret_cast<Vector3*>(EntityData.Pawn + Offsets::ViewOffset);
+
+        Entity CurrentEntity{};
+
+        CurrentEntity.Base = EntityData.Pawn;
+        CurrentEntity.Name = EntityData.Name;
+
+        CurrentEntity.Health = Health;
+        CurrentEntity.Team = *reinterpret_cast<int*>(EntityData.Pawn + Offsets::Team);
+
+        CurrentEntity.FeetPos = Origin;
+        CurrentEntity.HeadPos = Vector3(Origin.X + ViewOffset.X, Origin.Y + ViewOffset.Y, Origin.Z + ViewOffset.Z + 10.0f);
+
+        Entities.push_back(std::move(CurrentEntity));
+    }
+}
+
+CEntities::EntityData CEntities::GetEntityData(uintptr_t ListEntry, int Index) const {
+    EntityData Data{};
+
+    const auto E1 = *reinterpret_cast<uintptr_t*>(ListEntry + (0x8 * (Index & 0x7FFF) >> 0x9) + 0x10);
+    if (!E1) return Data;
+
+    Data.Controller = *reinterpret_cast<uintptr_t*>(E1 + 0x78 * (Index & 0x1FF));
+    if (!Data.Controller) return Data;
+
+    const auto NamePtr = reinterpret_cast<char*>(Data.Controller + Offsets::Name);
+    if (NamePtr) Data.Name = std::string(NamePtr);
+
+    const auto Player = *reinterpret_cast<uint32_t*>(Data.Controller + Offsets::Player);
+    if (!Player) return Data;
+
+    const auto Entry2 = *reinterpret_cast<uintptr_t*>(ListEntry + 0x8 * ((Player & 0x7FFF) >> 0x9) + 0x10);
+    if (!Entry2) return Data;
+
+    Data.Pawn = *reinterpret_cast<uintptr_t*>(Entry2 + 0x78 * (Player & 0x1FF));
+    return Data;
+}
+
+Vector3 CEntities::GetPosition(uintptr_t Pawn) const {
+    return *reinterpret_cast<Vector3*>(Pawn + Offsets::OldOrigin);
+}
+
+bool CEntities::IsValidEntity(const EntityData& Data, int LocalTeam) const {
+    if (!Data.Controller || !Data.Pawn)
+        return false;
+
+    const auto LocalPawn = *reinterpret_cast<uintptr_t*>(Client + Offsets::LocalPlayer);
+    if (Data.Pawn == LocalPawn)
+        return false;
+
+    if (Globals::Misc::TeamCheck) {
+        const auto EntityTeam = *reinterpret_cast<int*>(Data.Controller + Offsets::Team);
+        if (EntityTeam == LocalTeam)
+            return false;
     }
 
-    void UpdateVisuals() {
-        std::lock_guard<std::mutex> lock(EntityM);
-        VisualsList.clear();
-
-        auto ViewMatrix = reinterpret_cast<float(*)[4][4]>(Client + Offsets::ViewMatrix);
-        auto LocalPlayer = *reinterpret_cast<uintptr_t*>(Client + Offsets::LocalPlayer);
-        if (!LocalPlayer) return;
-
-        auto LocalTeam = *reinterpret_cast<int*>(Client + Offsets::Team);
-        auto EntityArray = *reinterpret_cast<uintptr_t*>(Client + Offsets::EntityList);
-        if (!EntityArray) return;
-
-        for (int i = 0; i < 64; ++i) {
-            auto LE1 = *reinterpret_cast<uintptr_t*>(EntityArray + (8 * (i & 0x7FFF) >> 9) + 16);
-            if (!LE1) continue;
-
-            auto PlayerController = *reinterpret_cast<uintptr_t*>(LE1 + 120 * (i & 0x1FF));
-            if (!PlayerController) continue;
-
-            auto Player = *reinterpret_cast<uint32_t*>(PlayerController + Offsets::Player);
-            if (!Player) continue;
-
-            auto LE2 = *reinterpret_cast<uintptr_t*>(EntityArray + 0x8 * ((Player & 0x7FFF) >> 9) + 16);
-            if (!LE2) continue;
-
-            auto PlayerPawn = *reinterpret_cast<uintptr_t*>(LE2 + 120 * (Player & 0x1FF));
-            if (!PlayerPawn || PlayerPawn == LocalPlayer) continue;
-
-            int Health = *reinterpret_cast<int*>(PlayerPawn + Offsets::Health);
-            if (Health <= 0 || Health > 100)
-                continue;
-
-            int Team = *reinterpret_cast<int*>(PlayerPawn + Offsets::Team);
-            if (Team == LocalTeam) continue;
-
-            Vector3 FeetPos = *reinterpret_cast<Vector3*>(PlayerPawn + Offsets::OldOrigin);
-            Vector3 HeadPos = { FeetPos.X, FeetPos.Y, FeetPos.Z + 75.0f };
-
-            VisualsList.push_back({ PlayerPawn, "Player", Health, Team, HeadPos, FeetPos });
-        }
-    }
-
-    void UpdateAimbot() {
-        std::lock_guard<std::mutex> lock(EntityM);
-        AimbotList.clear();
-
-        auto ViewMatrix = reinterpret_cast<float(*)[4][4]>(Client + Offsets::ViewMatrix);
-        auto LocalPlayer = *reinterpret_cast<uintptr_t*>(Client + Offsets::LocalPlayer);
-        if (!LocalPlayer) return;
-
-        auto LocalTeam = *reinterpret_cast<int*>(Client + Offsets::Team);
-        auto EntityArray = *reinterpret_cast<uintptr_t*>(Client + Offsets::EntityList);
-        if (!EntityArray) return;
-
-        for (int i = 0; i < 64; ++i) {
-            auto LE1 = *reinterpret_cast<uintptr_t*>(EntityArray + (8 * (i & 0x7FFF) >> 9) + 16);
-            if (!LE1) continue;
-
-            auto PlayerController = *reinterpret_cast<uintptr_t*>(LE1 + 120 * (i & 0x1FF));
-            if (!PlayerController) continue;
-
-            auto Player = *reinterpret_cast<uint32_t*>(PlayerController + Offsets::Player);
-            if (!Player) continue;
-
-            auto LE2 = *reinterpret_cast<uintptr_t*>(EntityArray + 0x8 * ((Player & 0x7FFF) >> 9) + 16);
-            if (!LE2) continue;
-
-            auto PlayerPawn = *reinterpret_cast<uintptr_t*>(LE2 + 120 * (Player & 0x1FF));
-            if (!PlayerPawn || PlayerPawn == LocalPlayer) continue;
-
-            int Health = *reinterpret_cast<int*>(PlayerPawn + Offsets::Health);
-            if (Health <= 0 || Health > 100)
-                continue;
-
-            int Team = *reinterpret_cast<int*>(PlayerPawn + Offsets::Team);
-            if (Team == LocalTeam) continue;
-
-            Vector3 FeetPos = *reinterpret_cast<Vector3*>(PlayerPawn + Offsets::OldOrigin);
-            Vector3 HeadPos = { FeetPos.X, FeetPos.Y, FeetPos.Z + 65.0f };
-
-            AimbotList.push_back({ PlayerPawn, "Player", Health, Team, HeadPos, FeetPos });
-        }
-    }
+    return true;
 }

@@ -1,40 +1,47 @@
-/*
-
-Entities.hpp (Finds players in-game)
-Authors: 0Zayn (Zayn)
-
-*/
-
 #pragma once
 
-#include <cstdint>
+#include <Windows.h>
 #include <vector>
-#include <mutex>
-#include <unordered_map>
+#include <memory>
+#include <string>
 
-#include <Math/Math.hpp>
+#include <Globals.hpp>
 #include <Offsets.hpp>
+#include <Math/Math.hpp>
 
-namespace Entities {
-    extern uintptr_t Client;
-
+class CEntities {
+public:
     struct Entity {
-        uintptr_t Base;
-
+        uintptr_t Base{};
         std::string Name;
-        int Health;
-        int Team;
+
+        int Health{};
+        int Team{};
 
         Vector3 HeadPos;
         Vector3 FeetPos;
 
-        bool IsValid() const;
+        bool IsValid() const { return Base && Health > 0 && Health <= 100; }
     };
 
-    extern std::vector<Entity> VisualsList;
-    extern std::vector<Entity> AimbotList;
-    extern std::mutex EntityM;
+    static inline const uintptr_t Client = reinterpret_cast<uintptr_t>(GetModuleHandle("client.dll"));
 
-    void UpdateVisuals();
-    void UpdateAimbot();
-}
+    void Update();
+    const std::vector<Entity>& GetEntities() const { return Entities; }
+
+private:
+    struct EntityData {
+        uintptr_t Controller{};
+        uintptr_t Pawn{};
+        std::string Name;
+    };
+
+    EntityData GetEntityData(uintptr_t ListEntry, int Index) const;
+   
+    Vector3 GetPosition(uintptr_t Pawn) const;
+    bool IsValidEntity(const EntityData& Data, int LocalTeam) const;
+
+    std::vector<Entity> Entities;
+};
+
+inline auto Entities = std::make_unique<CEntities>();

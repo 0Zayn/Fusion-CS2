@@ -87,10 +87,10 @@
     <ClInclude Include="Source\Offsets.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Miscellaneous\Aimbot\Aimbot.hpp">
+    <ClInclude Include="Source\Entities\Entities.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Entities\Entities.hpp">
+    <ClInclude Include="Source\Miscellaneous\Aimbot\Aimbot.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -149,10 +149,10 @@
     <ClCompile Include="Source\Miscellaneous\Visuals\Visuals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Miscellaneous\Aimbot\Aimbot.cpp">
+    <ClCompile Include="Source\Entities\Entities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Entities\Entities.cpp">
+    <ClCompile Include="Source\Miscellaneous\Aimbot\Aimbot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

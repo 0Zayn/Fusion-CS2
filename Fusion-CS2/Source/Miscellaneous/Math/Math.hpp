@@ -8,6 +8,7 @@ Authors: 0Zayn (Zayn)
 #pragma once
 
 #include <Windows.h>
+#include <complex>
 
 struct Vector2 {
     constexpr Vector2(
@@ -16,25 +17,6 @@ struct Vector2 {
     ) noexcept : X(X), Y(Y) {}
 
     float X, Y;
-
-    // Overload current operators, since they wouldnt work with our aimbot
-    Vector2 operator-(const Vector2& other) const {
-        return Vector2(X - other.X, Y - other.Y);
-    }
-
-    Vector2 operator*(float scalar) const {
-        return Vector2(X * scalar, Y * scalar);
-    }
-
-    Vector2 operator+(const Vector2& other) const {
-        return Vector2(X + other.X, Y + other.Y);
-    }
-
-    Vector2& operator+=(const Vector2& other) {
-        X += other.X;
-        Y += other.Y;
-        return *this;
-    }
 };
 
 struct Vector3 {
@@ -43,6 +25,23 @@ struct Vector3 {
         const float Y = 0.f,
         const float Z = 0.f
     ) noexcept : X(X), Y(Y), Z(Z) {}
+
+    // Overload current operators to work with our aimbot
+    Vector3 operator+(const Vector3& Other) const {
+        return Vector3(X + Other.X, Y + Other.Y, Z + Other.Z);
+    }
+
+    Vector3 operator-(const Vector3& Other) const {
+        return Vector3(X - Other.X, Y - Other.Y, Z - Other.Z);
+    }
+
+    Vector3 operator*(float Scalar) const {
+        return Vector3(X * Scalar, Y * Scalar, Z * Scalar);
+    }
+
+    float Length() const {
+        return std::sqrt(X * X + Y * Y + Z * Z);
+    }
 
     bool WorldToScreen(Vector2& Out, float(*ViewMatrix)[4][4]) const;
 
