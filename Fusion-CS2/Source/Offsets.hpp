@@ -13,11 +13,11 @@ Dumper: https://github.com/a2x/cs2-dumper
 
 namespace Offsets {
 	// These change almost every update
-	constexpr std::ptrdiff_t EntityList = 0x19F0468;	// dwEntityList			(offsets.hpp)
-	constexpr std::ptrdiff_t LocalPlayer = 0x1853CF8;	// dwLocalPlayerPawn	(offsets.hpp)
+	constexpr std::ptrdiff_t EntityList = 0x19F1468;	// dwEntityList			(offsets.hpp)
+	constexpr std::ptrdiff_t LocalPlayer = 0x1854CF8;	// dwLocalPlayerPawn	(offsets.hpp)
 	
-	constexpr std::ptrdiff_t ViewMatrix = 0x1A52510;	// dwViewMatrix			(offsets.hpp)
-	constexpr std::ptrdiff_t ViewAngles = 0x1A5C610;	// dwViewAngles			(offsets.hpp)
+	constexpr std::ptrdiff_t ViewMatrix = 0x1A53510;	// dwViewMatrix			(offsets.hpp)
+	constexpr std::ptrdiff_t ViewAngles = 0x1A5D610;	// dwViewAngles			(offsets.hpp)
 
 	// These don't change as often
 	constexpr std::ptrdiff_t Player = 0x80C;			// m_hPlayerPawn		(client_dll.hpp)
