@@ -16,7 +16,7 @@ using NtCreateThreadEx_t = NTSTATUS(WINAPI*)(
     SIZE_T StackSize,
     SIZE_T MaximumStackSize,
     PVOID AttributeList
-    );
+);
 
 void __stdcall Shellcode(ManualMappingData* Data);
 
@@ -95,15 +95,15 @@ bool Injection::ManualMap(HANDLE TargetProcess, const std::string& DllPath) {
         return false;
     }
 
-    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
-    if (!ntdll) {
+    HMODULE Ntdll = GetModuleHandleA("ntdll.dll");
+    if (!Ntdll) {
         Utils::Log(Utils::LogType::ERR, "Failed to get handle for ntdll.dll");
         VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
         VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
         return false;
     }
 
-    NtCreateThreadEx_t NtCreateThreadEx = reinterpret_cast<NtCreateThreadEx_t>(GetProcAddress(ntdll, "NtCreateThreadEx"));
+    NtCreateThreadEx_t NtCreateThreadEx = reinterpret_cast<NtCreateThreadEx_t>(GetProcAddress(Ntdll, "NtCreateThreadEx"));
     if (!NtCreateThreadEx) {
         Utils::Log(Utils::LogType::ERR, "Failed to get NtCreateThreadEx function address");
         VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
