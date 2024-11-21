@@ -7,7 +7,6 @@
 #include <iostream>
 
 namespace Utils {
-
     enum class LogType {
         INFO,
         WARNING,
@@ -19,5 +18,4 @@ namespace Utils {
 
     DWORD FindProcessId(const std::string& Name);
     std::unique_ptr<void, decltype(&CloseHandle)> OpenHandle(DWORD ProcessId);
-
 }
