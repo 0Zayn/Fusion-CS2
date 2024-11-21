@@ -1,14 +1,14 @@
 #include "Utils.hpp"
 
 namespace Utils {
-    void Log(LogType type, const std::string& message) {
+    void Log(LogType type, const std::string& Message) {
         switch (type) {
         case LogType::INFO:    std::cout << "[INFO] ";    break;
         case LogType::WARNING: std::cout << "[WARNING] "; break;
         case LogType::ERR:     std::cout << "[ERROR] ";   break;
         case LogType::SUCCESS: std::cout << "[SUCCESS] "; break;
         }
-        std::cout << message << std::endl;
+        std::cout << Message << std::endl;
     }
 
     DWORD FindProcessId(const std::string& Name) {
