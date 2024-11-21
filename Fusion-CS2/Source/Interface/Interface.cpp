@@ -175,7 +175,7 @@ namespace Interface {
 
             ImGui::Checkbox("Team Check", &Globals::Misc::TeamCheck);
 
-            ImGui::Text("Aimbot Settings");
+            ImGui::Text("Aimbot");
             ImGui::Separator();
 
             ImGui::Checkbox("Enabled", &Globals::Aimbot::Enabled);
