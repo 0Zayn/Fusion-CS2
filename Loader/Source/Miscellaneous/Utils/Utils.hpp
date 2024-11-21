@@ -15,9 +15,9 @@ namespace Utils {
         SUCCESS
     };
 
-    void Log(LogType type, const std::string& message);
+    void Log(LogType type, const std::string& Message);
 
-    DWORD FindProcessId(const std::string& processName);
-    std::unique_ptr<void, decltype(&CloseHandle)> OpenHandle(DWORD processId);
+    DWORD FindProcessId(const std::string& Name);
+    std::unique_ptr<void, decltype(&CloseHandle)> OpenHandle(DWORD ProcessId);
 
 }
