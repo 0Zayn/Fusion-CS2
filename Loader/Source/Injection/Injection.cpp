@@ -1,37 +1,15 @@
 #include "Injection.hpp"
 
-using namespace Injection;
+#define RELOC_FLAG(RelInfo) ((RelInfo >> 12) == IMAGE_REL_BASED_DIR64)
 
-#define RELOC_FLAG(RelInfo)((RelInfo >> 12) == IMAGE_REL_BASED_DIR64)
+using NtCreateThreadEx_t = NTSTATUS(WINAPI*)(PHANDLE, ACCESS_MASK, PVOID, HANDLE, PVOID, PVOID, ULONG, SIZE_T, SIZE_T, SIZE_T, PVOID);
 
-using NtCreateThreadEx_t = NTSTATUS(WINAPI*)(
-    PHANDLE ThreadHandle,
-    ACCESS_MASK DesiredAccess,
-    PVOID ObjectAttributes,
-    HANDLE ProcessHandle,
-    PVOID StartRoutine,
-    PVOID Argument,
-    ULONG CreateFlags,
-    SIZE_T ZeroBits,
-    SIZE_T StackSize,
-    SIZE_T MaximumStackSize,
-    PVOID AttributeList
-);
-
-void __stdcall Shellcode(ManualMappingData* Data);
-
-bool Injection::ManualMap(HANDLE TargetProcess, const std::string& DllPath) {
+bool CInjector::ManualMap(HANDLE Process, const std::string& DllPath) {
     std::ifstream DllFile(DllPath, std::ios::binary | std::ios::ate);
-    if (!DllFile) {
-        Utils::Log(Utils::LogType::ERR, "Failed to open the DLL file: " + DllPath);
-        return false;
-    }
+    if (!DllFile.is_open()) return false;
 
     auto FileSize = DllFile.tellg();
-    if (FileSize < 0x1000) {
-        Utils::Log(Utils::LogType::ERR, "Invalid DLL file size");
-        return false;
-    }
+    if (FileSize < 0x1000) return false;
 
     std::vector<BYTE> DllData(static_cast<size_t>(FileSize));
     DllFile.seekg(0, std::ios::beg);
@@ -39,85 +17,68 @@ bool Injection::ManualMap(HANDLE TargetProcess, const std::string& DllPath) {
     DllFile.close();
 
     auto* DosHeader = reinterpret_cast<IMAGE_DOS_HEADER*>(DllData.data());
-    if (DosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
-        Utils::Log(Utils::LogType::ERR, "Invalid DLL file!");
-        return false;
-    }
+    if (DosHeader->e_magic != IMAGE_DOS_SIGNATURE) return false;
 
     auto* NtHeaders = reinterpret_cast<IMAGE_NT_HEADERS*>(DllData.data() + DosHeader->e_lfanew);
     auto* OptHeader = &NtHeaders->OptionalHeader;
 
-    if (NtHeaders->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) {
-        Utils::Log(Utils::LogType::ERR, "DLL platform mismatch!");
-        return false;
-    }
+    if (NtHeaders->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) return false;
 
-    BYTE* RemoteBase = reinterpret_cast<BYTE*>(VirtualAllocEx(TargetProcess, nullptr, OptHeader->SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-    if (!RemoteBase) {
-        Utils::Log(Utils::LogType::ERR, "Failed to allocate memory in target process: " + std::to_string(GetLastError()));
-        return false;
-    }
+    BYTE* RemoteBase = reinterpret_cast<BYTE*>(VirtualAllocEx(Process, nullptr, OptHeader->SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (!RemoteBase) return false;
 
-    ManualMappingData MappingData{
+    MappingData MData{
         LoadLibraryA,
-        GetProcAddress
+        GetProcAddress,
+        nullptr
     };
 
     auto* SectionHeader = IMAGE_FIRST_SECTION(NtHeaders);
     for (UINT i = 0; i < NtHeaders->FileHeader.NumberOfSections; ++i, ++SectionHeader) {
-        if (SectionHeader->SizeOfRawData) {
-            if (!WriteProcessMemory(TargetProcess, RemoteBase + SectionHeader->VirtualAddress, DllData.data() + SectionHeader->PointerToRawData, SectionHeader->SizeOfRawData, nullptr)) {
-                Utils::Log(Utils::LogType::ERR, "Failed to write section data: " + std::to_string(GetLastError()));
-                VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
-                return false;
-            }
+        if (SectionHeader->SizeOfRawData && !WriteProcessMemory(Process, RemoteBase + SectionHeader->VirtualAddress, DllData.data() + SectionHeader->PointerToRawData, SectionHeader->SizeOfRawData, nullptr)) {
+            VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
+            return false;
         }
     }
 
-    memcpy(DllData.data(), &MappingData, sizeof(MappingData));
-    if (!WriteProcessMemory(TargetProcess, RemoteBase, DllData.data(), 0x1000, nullptr)) {
-        Utils::Log(Utils::LogType::ERR, "Failed to write headers and mapping data: " + std::to_string(GetLastError()));
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
+    memcpy(DllData.data(), &MData, sizeof(MData));
+    if (!WriteProcessMemory(Process, RemoteBase, DllData.data(), 0x1000, nullptr)) {
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
         return false;
     }
 
-    auto RemoteShellcode = VirtualAllocEx(TargetProcess, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    auto RemoteShellcode = VirtualAllocEx(Process, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     if (!RemoteShellcode) {
-        Utils::Log(Utils::LogType::ERR, "Failed to allocate memory for shellcode: " + std::to_string(GetLastError()));
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
         return false;
     }
 
-    if (!WriteProcessMemory(TargetProcess, RemoteShellcode, Shellcode, 0x1000, nullptr)) {
-        Utils::Log(Utils::LogType::ERR, "Failed to write shellcode: " + std::to_string(GetLastError()));
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
-        VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
+    if (!WriteProcessMemory(Process, RemoteShellcode, Shellcode, 0x1000, nullptr)) {
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteShellcode, 0, MEM_RELEASE);
         return false;
     }
 
     HMODULE Ntdll = GetModuleHandleA("ntdll.dll");
     if (!Ntdll) {
-        Utils::Log(Utils::LogType::ERR, "Failed to get handle for ntdll.dll");
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
-        VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteShellcode, 0, MEM_RELEASE);
         return false;
     }
 
     NtCreateThreadEx_t NtCreateThreadEx = reinterpret_cast<NtCreateThreadEx_t>(GetProcAddress(Ntdll, "NtCreateThreadEx"));
     if (!NtCreateThreadEx) {
-        Utils::Log(Utils::LogType::ERR, "Failed to get NtCreateThreadEx function address");
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
-        VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteShellcode, 0, MEM_RELEASE);
         return false;
     }
 
     HANDLE RemoteThread = nullptr;
-    NTSTATUS status = NtCreateThreadEx(&RemoteThread, THREAD_ALL_ACCESS, nullptr, TargetProcess, reinterpret_cast<PVOID>(RemoteShellcode), RemoteBase, 0, 0, 0, 0, nullptr);
+    NTSTATUS Status = NtCreateThreadEx(&RemoteThread, THREAD_ALL_ACCESS, nullptr, Process, RemoteShellcode, RemoteBase, 0, 0, 0, 0, nullptr);
 
-    if (status != 0 || !RemoteThread) {
-        Utils::Log(Utils::LogType::ERR, "Failed to create remote thread: " + std::to_string(status));
-        VirtualFreeEx(TargetProcess, RemoteBase, 0, MEM_RELEASE);
-        VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
+    if (Status != 0 || !RemoteThread) {
+        VirtualFreeEx(Process, RemoteBase, 0, MEM_RELEASE);
+        VirtualFreeEx(Process, RemoteShellcode, 0, MEM_RELEASE);
         return false;
     }
 
@@ -125,18 +86,19 @@ bool Injection::ManualMap(HANDLE TargetProcess, const std::string& DllPath) {
 
     HINSTANCE CheckModule = nullptr;
     while (!CheckModule) {
-        ManualMappingData Data{ 0 };
-        ReadProcessMemory(TargetProcess, RemoteBase, &Data, sizeof(Data), nullptr);
+        MappingData Data{ 0 };
+        ReadProcessMemory(Process, RemoteBase, &Data, sizeof(Data), nullptr);
         CheckModule = Data.ModuleHandle;
         Sleep(10);
     }
 
-    VirtualFreeEx(TargetProcess, RemoteShellcode, 0, MEM_RELEASE);
+    VirtualFreeEx(Process, RemoteShellcode, 0, MEM_RELEASE);
 
     return true;
 }
 
-void __stdcall Shellcode(ManualMappingData* Data) {
+void WINAPI CInjector::Shellcode(LPVOID DataPtr) {
+    auto* Data = static_cast<MappingData*>(DataPtr);
     if (!Data) return;
 
     auto* Base = reinterpret_cast<BYTE*>(Data);
@@ -144,7 +106,7 @@ void __stdcall Shellcode(ManualMappingData* Data) {
 
     auto LoadLibraryA = Data->LoadLibraryA;
     auto GetProcAddress = Data->GetProcAddress;
-    auto DllMain = reinterpret_cast<DllEntryPointType>(Base + OptHeader->AddressOfEntryPoint);
+    auto DllMain = reinterpret_cast<DllEntryPointFunc>(Base + OptHeader->AddressOfEntryPoint);
 
     BYTE* LocationDelta = Base - OptHeader->ImageBase;
     if (LocationDelta) {
@@ -193,6 +155,7 @@ void __stdcall Shellcode(ManualMappingData* Data) {
     if (OptHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size) {
         auto* TLS = reinterpret_cast<IMAGE_TLS_DIRECTORY*>(Base + OptHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
         auto* Callback = reinterpret_cast<PIMAGE_TLS_CALLBACK*>(TLS->AddressOfCallBacks);
+
         while (Callback && *Callback) {
             (*Callback)(Base, DLL_PROCESS_ATTACH, nullptr);
             ++Callback;

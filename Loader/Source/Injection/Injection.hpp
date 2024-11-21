@@ -1,22 +1,26 @@
 #pragma once
 
 #include <Windows.h>
-#include <string>
+#include <winternl.h>
 #include <fstream>
 #include <vector>
 
-#include <Utils/Utils.hpp>
+class CInjector {
+public:
+    bool ManualMap(HANDLE Process, const std::string& DllPath);
 
-namespace Injection {
-    using LoadLibraryAType = HINSTANCE(WINAPI*)(const char* lpLibFileName);
-    using GetProcAddressType = FARPROC(WINAPI*)(HMODULE hModule, const char* lpProcName);
-    using DllEntryPointType = BOOL(WINAPI*)(void* hDll, DWORD dwReason, void* pReserved);
+    using LoadLibraryFunc = HINSTANCE(WINAPI*)(const char* LibFileName);
+    using GetProcAddressFunc = FARPROC(WINAPI*)(HMODULE Module, const char* ProcName);
+    using DllEntryPointFunc = BOOL(WINAPI*)(void* Module, DWORD Reason, void* Reserved);
 
-    struct ManualMappingData {
-        LoadLibraryAType LoadLibraryA;
-        GetProcAddressType GetProcAddress;
+    struct MappingData {
+        LoadLibraryFunc LoadLibraryA;
+        GetProcAddressFunc GetProcAddress;
         HINSTANCE ModuleHandle;
     };
 
-    bool ManualMap(HANDLE TargetProcess, const std::string& DllPath);
-}
+private:
+    static void WINAPI Shellcode(LPVOID DataPtr);
+};
+
+inline auto Injector = std::make_unique<CInjector>();

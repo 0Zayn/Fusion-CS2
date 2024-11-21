@@ -1,13 +1,10 @@
 ﻿#include "EntryPoint.hpp"
 
-constexpr const char* DLL_PATH = "./Fusion-CS2.dll";
-constexpr const char* TARGET_PROCESS = "cs2.exe";
-
-void Logo() {
+void PrintLogo() {
     constexpr std::wstring_view DODGER_BLUE = L"\x1b[38;2;30;144;255m";
     constexpr std::wstring_view RESET = L"\x1b[0m";
 
-    constexpr std::array PrintLogo{
+    constexpr std::array Logo{
         L"███████╗██╗░░░██╗░██████╗██╗░█████╗░███╗░░██╗",
         L"██╔════╝██║░░░██║██╔════╝██║██╔══██╗████╗░██║",
         L"█████╗░░██║░░░██║╚█████╗░██║██║░░██║██╔██╗██║",
@@ -38,13 +35,13 @@ int main() {
     try {
         PrintLogo();
 
-        DWORD ProcessId = Utils::FindProcessId(TARGET_PROCESS);
+        DWORD ProcessId = Utils::FindProcessId("cs2.exe");
         if (ProcessId == 0) 
             Utils::Log(Utils::LogType::ERR, "The target process was not found.");
 
-        auto ProcessHandle = Utils::OpenHandle(ProcessId);
+        auto Handle = Utils::OpenHandle(ProcessId);
 
-        if (!Injection::ManualMap(ProcessHandle.get(), DLL_PATH))
+        if (!Injector->ManualMap(Handle.get(), "./Fusion-CS2.dll"))
             Utils::Log(Utils::LogType::ERR, "Mapping was unsuccessful.");
 
         Utils::Log(Utils::LogType::SUCCESS, "Successfully loaded the cheat!");
