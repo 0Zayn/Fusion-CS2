@@ -10,6 +10,14 @@ Great source for beginners to learn
 
 **Recommend any features/changes, and they most likely will be added.**
 
+To-Do:
+- Improve aimbot heavily
+- Add prediction
+- Add keybind changing for aimbot
+- Add customization of colors
+- Add more ESP styles (Including skeleton esp)
+- Add chams
+
 Images:
 ![image](https://github.com/user-attachments/assets/9437db67-af86-4a4d-a2a5-85d2c2ae493f)
 
